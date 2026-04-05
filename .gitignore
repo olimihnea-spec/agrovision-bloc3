@@ -1,0 +1,27 @@
+# ── SECURITATE — nu se urca niciodata pe GitHub ──────────────────────────────
+.streamlit/secrets.toml
+*.env
+.env.*
+PAROLE_AGROVISION_PRIVAT.txt
+
+# ── Modele antrenate (proprietate intelectuala) ───────────────────────────────
+*.pt
+*.pth
+*.onnx
+*.weights
+
+# ── Date reale fermieri (GDPR) ────────────────────────────────────────────────
+date_reale/
+*.db
+
+# ── Fisiere temporare Python ──────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# ── Output-uri generate ───────────────────────────────────────────────────────
+runs/
+outputs/
+exports/
+*.zip
