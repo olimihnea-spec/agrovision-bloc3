@@ -325,7 +325,7 @@ with tab_pred:
 
     st.markdown("#### Primele 20 parcele din dataset")
     st.dataframe(
-        df_full.head(20).style.applymap(
+        df_full.head(20).style.map(
             lambda v: f"background-color: {CULORI_RISC.get(v, 'white')}22",
             subset=["risc_pac"]
         ).format({"suprafata": "{:.2f}", "vegetatie": "{:.1f}",
@@ -367,7 +367,7 @@ with tab_eval:
                 return "background-color: #fadbd8"
 
         st.dataframe(
-            df_report.style.applymap(culoare_f1, subset=["F1"]),
+            df_report.style.map(culoare_f1, subset=["F1"]),
             use_container_width=True
         )
         st.markdown("---")

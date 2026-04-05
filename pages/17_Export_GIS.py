@@ -174,7 +174,7 @@ with st.expander("Previzualizeaza datele de exportat"):
              "CRESTERE":"color:#7dcea0","STABIL":"color:#a8b2d8",
              "STABIL-RISC":"color:#f39c12;font-weight:bold"}
         return m.get(str(val),"")
-    st.dataframe(df_prev.style.applymap(color_trend, subset=["Trend"]),
+    st.dataframe(df_prev.style.map(color_trend, subset=["Trend"]),
                  use_container_width=True)
 
 st.markdown("---")

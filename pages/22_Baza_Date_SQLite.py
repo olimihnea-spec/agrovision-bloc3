@@ -322,7 +322,7 @@ with tab1:
                           "uat":"UAT","suprafata":"Ha","vegetatie":"Veg%",
                           "sol_gol":"Sol%","apa":"Apa%",
                           "confidenta":"Conf","status":"Status"})
-        .style.applymap(color_status, subset=["Status"]),
+        .style.map(color_status, subset=["Status"]),
         use_container_width=True, hide_index=True
     )
 
@@ -395,7 +395,7 @@ with tab2:
                                      "uat":"UAT","suprafata":"Ha","vegetatie":"Veg%",
                                      "sol_gol":"Sol%","apa":"Apa%",
                                      "confidenta":"Conf","status":"Status"})
-                    .style.applymap(color_status, subset=["Status"]),
+                    .style.map(color_status, subset=["Status"]),
                     use_container_width=True, hide_index=True
                 )
 
@@ -443,7 +443,7 @@ with tab3:
                 "vegetatie":"Veg%","sol_gol":"Sol%","apa":"Apa%",
                 "status":"Status","inspector":"Inspector"
             })
-            .style.applymap(color_status, subset=["Status"]),
+            .style.map(color_status, subset=["Status"]),
             use_container_width=True, hide_index=True
         )
 

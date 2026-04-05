@@ -167,7 +167,7 @@ def coloreaza_risc(val):
     return "background-color:#c8e6c9"
 
 st.dataframe(
-    df.style.applymap(coloreaza_risc, subset=["Risc PAC"]),
+    df.style.map(coloreaza_risc, subset=["Risc PAC"]),
     use_container_width=True, hide_index=True
 )
 

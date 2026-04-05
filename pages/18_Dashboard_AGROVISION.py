@@ -400,9 +400,9 @@ def stil_delta(val):
 
 st.dataframe(
     df.style
-      .applymap(stil_pac,   subset=["PAC T2"])
-      .applymap(stil_trend, subset=["Trend"])
-      .applymap(stil_delta, subset=["Delta (%)"]),
+      .map(stil_pac,   subset=["PAC T2"])
+      .map(stil_trend, subset=["Trend"])
+      .map(stil_delta, subset=["Delta (%)"]),
     use_container_width=True, height=320
 )
 

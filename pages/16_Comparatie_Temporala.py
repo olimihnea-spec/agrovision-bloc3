@@ -551,8 +551,8 @@ if btn_analiza:
 
     st.dataframe(
         df_comp.style
-               .applymap(color_delta, subset=["Delta (%)"])
-               .applymap(color_trend, subset=["Trend"]),
+               .map(color_delta, subset=["Delta (%)"])
+               .map(color_trend, subset=["Trend"]),
         use_container_width=True, height=350
     )
 

@@ -614,7 +614,7 @@ def coloreaza_status(val):
     return ""
 
 st.dataframe(
-    df_preview.style.applymap(coloreaza_status, subset=["Status"]),
+    df_preview.style.map(coloreaza_status, subset=["Status"]),
     use_container_width=True,
     hide_index=True
 )

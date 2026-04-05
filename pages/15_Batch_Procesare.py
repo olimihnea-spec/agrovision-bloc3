@@ -572,8 +572,8 @@ if btn_batch:
 
     st.dataframe(
         df_rez.style
-              .applymap(color_concluzie, subset=["Concluzie PAC"])
-              .applymap(color_veg, subset=["Vegetatie (%)"]),
+              .map(color_concluzie, subset=["Concluzie PAC"])
+              .map(color_veg, subset=["Vegetatie (%)"]),
         use_container_width=True,
         height=350
     )
