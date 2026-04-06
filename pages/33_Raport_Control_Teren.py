@@ -278,7 +278,7 @@ def genereaza_raport_word(
         ("Parcele NECONFORM",          str(neconforme)),
         ("Distanta totala ruta",       f"{dist_total:.1f} km"),
         ("UAT-uri acoperite",          str(len({p['uat'] for p in parcele_selectate}))),
-        ("Data intocmirii raportului", date_control.strftime("%d.%m.%Y")),
+        ("Data intocmirii raportului", data_control.strftime("%d.%m.%Y")),
         ("Inspector",                  inspector),
     ]
 
