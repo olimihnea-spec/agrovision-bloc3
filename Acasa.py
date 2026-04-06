@@ -72,8 +72,8 @@ st.sidebar.markdown("""
 st.sidebar.caption("Prof. Asoc. Dr. Oliviu Mihnea Gamulescu")
 st.sidebar.caption("UCB Targu Jiu | APIA CJ Gorj")
 st.sidebar.divider()
-st.sidebar.markdown(f"**Progres:** 30 / 40 zile")
-st.sidebar.progress(30/40)
+st.sidebar.markdown(f"**Progres:** 33 / 40 zile")
+st.sidebar.progress(33/40)
 st.sidebar.markdown(f"**Data:** {date.today().strftime('%d.%m.%Y')}")
 st.sidebar.divider()
 st.sidebar.markdown("**Model activ:**")
@@ -103,12 +103,12 @@ st.markdown("""
 c1, c2, c3, c4, c5 = st.columns(5)
 with c1:
     st.markdown("""<div class="kpi-card">
-        <div style='font-size:28px; font-weight:800; color:#0052A5;'>30</div>
+        <div style='font-size:28px; font-weight:800; color:#0052A5;'>33</div>
         <div style='font-size:12px; color:#666;'>Zile parcurse</div>
     </div>""", unsafe_allow_html=True)
 with c2:
     st.markdown("""<div class="kpi-card">
-        <div style='font-size:28px; font-weight:800; color:#28a745;'>30</div>
+        <div style='font-size:28px; font-weight:800; color:#28a745;'>33</div>
         <div style='font-size:12px; color:#666;'>Module active</div>
     </div>""", unsafe_allow_html=True)
 with c3:
@@ -212,12 +212,21 @@ with col_s2:
         st.markdown(f'<div class="zi-completa">✅ <b>Ziua {nr}</b> — {desc}</div>',
                     unsafe_allow_html=True)
 
-    st.markdown('<div class="bloc-titlu" style="background:#6c757d;">Zilele 31-40 — Planificate</div>',
+    st.markdown('<div class="bloc-titlu">Zilele 31-33 — GIS & QGIS</div>',
+                unsafe_allow_html=True)
+    for nr, desc in [
+        ("31", "QGIS WMS Live — straturi oficiale ANCPI, ortofoto, cadastru"),
+        ("32", "Analiza Spatiala — Haversine, matrice distante, ruta greedy, heatmap risc"),
+        ("33", "Raport Control Teren — Word oficial APIA, Stereo 70, ruta inspectie"),
+    ]:
+        st.markdown(f'<div class="zi-completa">✅ <b>Ziua {nr}</b> — {desc}</div>',
+                    unsafe_allow_html=True)
+
+    st.markdown('<div class="bloc-titlu" style="background:#6c757d;">Zilele 34-40 — Planificate</div>',
                 unsafe_allow_html=True)
     for perioada, desc in [
-        ("31-33", "Retele neuronale — CNN, transfer learning avansat"),
-        ("34-36", "Integrare QGIS — WMS live, harti oficiale ANCPI"),
-        ("37-39", "Dashboard ministerial — rapoarte PAC automatizate"),
+        ("34-36", "Dashboard ministerial — rapoarte PAC automatizate"),
+        ("37-39", "Multi-agenti simulare drona — control autonom parcele"),
         ("40",    "Sinteza finala — demo complet, portofoliu academic"),
     ]:
         st.markdown(f'<div class="zi-planificata">○ <b>Zilele {perioada}</b> — {desc}</div>',
@@ -270,5 +279,5 @@ with col_m3:
 st.divider()
 st.info("""
 Selecteaza o zi din **meniul lateral stang** pentru a accesa modulul dorit.
-Zilele marcate cu ✅ sunt complete si functionale. Bloc 3: 30/40 zile finalizate.
+Zilele marcate cu ✅ sunt complete si functionale. Bloc 3: 33/40 zile finalizate.
 """)
