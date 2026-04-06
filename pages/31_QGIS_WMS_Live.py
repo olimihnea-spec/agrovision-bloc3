@@ -18,6 +18,8 @@ from folium import plugins
 from streamlit_folium import st_folium
 import pandas as pd
 import json
+import io
+import zipfile
 
 # ─── CONFIGURARE PAGINA ───────────────────────────────────────────────────────
 st.set_page_config(
@@ -220,6 +222,90 @@ def exporta_geojson(parcele: list) -> str:
     }, ensure_ascii=False, indent=2)
 
 
+def exporta_shapefile_stereo70(parcele: list) -> bytes:
+    """
+    Exporta parcelele ca Shapefile Point in Stereo 70 (EPSG:31700).
+    Returneaza un ZIP cu fisierele .shp, .shx, .dbf, .prj.
+    Stereo 70 = sistemul national de coordonate Romania, obligatoriu APIA/ANCPI.
+    """
+    try:
+        import shapefile
+        from pyproj import Transformer
+    except ImportError:
+        return b""
+
+    # Transformator WGS84 (EPSG:4326) → Stereo 70 (EPSG:31700)
+    transformer = Transformer.from_crs("EPSG:4326", "EPSG:31700", always_xy=True)
+
+    shp_buf = io.BytesIO()
+    shx_buf = io.BytesIO()
+    dbf_buf = io.BytesIO()
+
+    w = shapefile.Writer(
+        shp=shp_buf, shx=shx_buf, dbf=dbf_buf,
+        shapeType=shapefile.POINT
+    )
+
+    # Campuri atribute (DBF)
+    w.field("COD_LPIS",  "C", 25)
+    w.field("FERMIER",   "C", 50)
+    w.field("UAT",       "C", 30)
+    w.field("CULTURA",   "C", 20)
+    w.field("SUPRAFATA", "N", 10, 2)
+    w.field("STATUS",    "C", 15)
+    w.field("X_STEREO",  "N", 12, 2)
+    w.field("Y_STEREO",  "N", 12, 2)
+
+    for p in parcele:
+        # Conversie lon/lat → X/Y Stereo 70
+        x_stereo, y_stereo = transformer.transform(p["lon"], p["lat"])
+        w.point(x_stereo, y_stereo)
+        w.record(
+            p["cod"], p["fermier"], p["uat"],
+            p["cultura"], p["suprafata"], p["status"],
+            round(x_stereo, 2), round(y_stereo, 2)
+        )
+
+    w.close()
+
+    # Fisier .prj — definitia Stereo 70 in format WKT
+    prj_stereo70 = (
+        'PROJCS["Stereo70",'
+        'GEOGCS["Dealul Piscului 1970",'
+        'DATUM["Dealul_Piscului_1970",'
+        'SPHEROID["Krassowsky 1940",6378245,298.3]],'
+        'PRIMEM["Greenwich",0],'
+        'UNIT["degree",0.0174532925199433]],'
+        'PROJECTION["Oblique_Stereographic"],'
+        'PARAMETER["latitude_of_origin",46],'
+        'PARAMETER["central_meridian",25],'
+        'PARAMETER["scale_factor",0.99975],'
+        'PARAMETER["false_easting",500000],'
+        'PARAMETER["false_northing",500000],'
+        'UNIT["metre",1]]'
+    )
+
+    # Impacheteaza intr-un ZIP
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("Parcele_LPIS_Gorj_Stereo70.shp", shp_buf.getvalue())
+        zf.writestr("Parcele_LPIS_Gorj_Stereo70.shx", shx_buf.getvalue())
+        zf.writestr("Parcele_LPIS_Gorj_Stereo70.dbf", dbf_buf.getvalue())
+        zf.writestr("Parcele_LPIS_Gorj_Stereo70.prj", prj_stereo70)
+        # Fisier LISEZ-MOI
+        nota = (
+            "Shapefile Parcele LPIS Gorj\n"
+            "Sistem coordonate: Stereo 70 (EPSG:31700)\n"
+            "Tip geometrie: Point\n"
+            "Campuri: COD_LPIS, FERMIER, UAT, CULTURA, SUPRAFATA, STATUS, X_STEREO, Y_STEREO\n"
+            "Generat de: AGROVISION — Ziua 31\n"
+            "Autor: Prof. Asoc. Dr. Oliviu Mihnea Gamulescu, UCB Targu Jiu 2026\n"
+        )
+        zf.writestr("CITESTE.txt", nota)
+
+    return zip_buf.getvalue()
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # INTERFATA STREAMLIT
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -374,10 +460,10 @@ with tab3:
 
     geojson_str = exporta_geojson(PARCELE)
 
-    col_exp1, col_exp2 = st.columns(2)
+    col_exp1, col_exp2, col_exp3 = st.columns(3)
     with col_exp1:
         st.download_button(
-            label="Descarca GeoJSON (toate parcelele)",
+            label="Descarca GeoJSON (WGS84)",
             data=geojson_str.encode("utf-8"),
             file_name="Parcele_LPIS_Gorj_WGS84.geojson",
             mime="application/geo+json",
@@ -385,8 +471,8 @@ with tab3:
             type="primary"
         )
         st.caption(
-            "Deschide in QGIS: Layer → Add Layer → "
-            "Add Vector Layer → alege fisierul .geojson"
+            "EPSG:4326 — WGS84 (GPS global). "
+            "Deschide in QGIS: Layer → Add Vector Layer"
         )
 
     with col_exp2:
@@ -405,10 +491,45 @@ with tab3:
             "X field: lon, Y field: lat"
         )
 
+    with col_exp3:
+        shp_zip = exporta_shapefile_stereo70(PARCELE)
+        if shp_zip:
+            st.download_button(
+                label="Descarca Shapefile Stereo 70",
+                data=shp_zip,
+                file_name="Parcele_LPIS_Gorj_Stereo70.zip",
+                mime="application/zip",
+                use_container_width=True,
+                type="secondary"
+            )
+            st.caption(
+                "EPSG:31700 — Stereo 70 (sistemul national Romania). "
+                "ZIP cu .shp .shx .dbf .prj — import direct QGIS/ANCPI"
+            )
+        else:
+            st.warning("pyshp sau pyproj nu este instalat.")
+
     st.divider()
     st.markdown("#### Previzualizare GeoJSON")
     with st.expander("Vezi continutul GeoJSON"):
         st.code(geojson_str[:800] + "\n...", language="json")
+
+    st.divider()
+    st.markdown("#### Ce este Stereo 70?")
+    st.markdown("""
+<div style='background:#e8f4fd; border-radius:8px; padding:14px 18px;
+            border-left:4px solid #0052A5; font-size:13px;'>
+<b>Stereo 70 (EPSG:31700)</b> — sistemul national de coordonate al Romaniei.<br><br>
+- Proiectie: <b>Oblique Stereographic</b> (stereografica oblicua)<br>
+- Meridian central: <b>25° E</b>, Paralela origine: <b>46° N</b><br>
+- Elipsoid: <b>Krassovsky 1940</b> (6.378.245 m)<br>
+- Unitate: <b>metri</b><br>
+- False Easting: 500.000 m | False Northing: 500.000 m<br><br>
+<b>De ce Stereo 70?</b> Toate hartile oficiale ANCPI, LPIS, cadastru si APIA
+folosesc Stereo 70. Datele GPS sunt in WGS84 — conversie necesara inainte
+de suprapunere pe harile oficiale.
+</div>
+""", unsafe_allow_html=True)
 
     st.markdown("#### Pasi import in QGIS")
     pasi = [
