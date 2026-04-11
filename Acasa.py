@@ -1,6 +1,6 @@
 """
 BLOC 3 — Deep Learning YOLOv8
-Pagina principala — progres real, 30 zile parcurse
+Pagina principala — FINALIZAT 40/40 zile (9 aprilie 2026)
 Autor: Prof. Asoc. Dr. Oliviu Mihnea Gamulescu | UCB Targu Jiu | APIA CJ Gorj
 """
 
@@ -72,8 +72,8 @@ st.sidebar.markdown("""
 st.sidebar.caption("Prof. Asoc. Dr. Oliviu Mihnea Gamulescu")
 st.sidebar.caption("UCB Targu Jiu | APIA CJ Gorj")
 st.sidebar.divider()
-st.sidebar.markdown(f"**Progres:** 33 / 40 zile")
-st.sidebar.progress(33/40)
+st.sidebar.markdown(f"**Progres:** 40 / 40 zile — COMPLET")
+st.sidebar.progress(1.0)
 st.sidebar.markdown(f"**Data:** {date.today().strftime('%d.%m.%Y')}")
 st.sidebar.divider()
 st.sidebar.markdown("**Model activ:**")
@@ -103,12 +103,12 @@ st.markdown("""
 c1, c2, c3, c4, c5 = st.columns(5)
 with c1:
     st.markdown("""<div class="kpi-card">
-        <div style='font-size:28px; font-weight:800; color:#0052A5;'>33</div>
+        <div style='font-size:28px; font-weight:800; color:#0052A5;'>40</div>
         <div style='font-size:12px; color:#666;'>Zile parcurse</div>
     </div>""", unsafe_allow_html=True)
 with c2:
     st.markdown("""<div class="kpi-card">
-        <div style='font-size:28px; font-weight:800; color:#28a745;'>33</div>
+        <div style='font-size:28px; font-weight:800; color:#28a745;'>40</div>
         <div style='font-size:12px; color:#666;'>Module active</div>
     </div>""", unsafe_allow_html=True)
 with c3:
@@ -130,7 +130,7 @@ with c5:
 st.divider()
 
 # ─── PROGRES ZILE ─────────────────────────────────────────────────────────────
-st.subheader("Progres Bloc 3 — 40 de zile YOLOv8")
+st.subheader("Bloc 3 FINALIZAT — 40/40 zile YOLOv8 (9 aprilie 2026)")
 
 col_s1, col_s2 = st.columns(2)
 
@@ -222,14 +222,25 @@ with col_s2:
         st.markdown(f'<div class="zi-completa">✅ <b>Ziua {nr}</b> — {desc}</div>',
                     unsafe_allow_html=True)
 
-    st.markdown('<div class="bloc-titlu" style="background:#6c757d;">Zilele 34-40 — Planificate</div>',
+    st.markdown('<div class="bloc-titlu">Zilele 34-36 — Nivel Ministerial</div>',
                 unsafe_allow_html=True)
-    for perioada, desc in [
-        ("34-36", "Dashboard ministerial — rapoarte PAC automatizate"),
-        ("37-39", "Multi-agenti simulare drona — control autonom parcele"),
-        ("40",    "Sinteza finala — demo complet, portofoliu academic"),
+    for nr, desc in [
+        ("34", "Dashboard PAC Ministerial — KPI, culturi, plati, conformitate, harta UAT"),
+        ("35", "Export Excel Multi-Sheet — date ministeriale, 4 sheet-uri, formatare"),
+        ("36", "Raport PDF Ministerial — multi-pagina, grafice, tabel UAT, fpdf2"),
     ]:
-        st.markdown(f'<div class="zi-planificata">○ <b>Zilele {perioada}</b> — {desc}</div>',
+        st.markdown(f'<div class="zi-completa">✅ <b>Ziua {nr}</b> — {desc}</div>',
+                    unsafe_allow_html=True)
+
+    st.markdown('<div class="bloc-titlu">Zilele 37-40 — Agenti AI & Finalizare</div>',
+                unsafe_allow_html=True)
+    for nr, desc in [
+        ("37", "Multi-Agenti Simulare — orchestrator + 4 agenti specializati, st.status()"),
+        ("38", "Multi-Agenti Avansat — paralelism threading, orchestrator dinamic, retry, SQLite"),
+        ("39", "Generator Articol ISI — draft Word MDPI, IMRaD, date reale mAP50=0.829"),
+        ("40", "Sinteza Finala — timeline, radar competente, certificat UCB, roadmap"),
+    ]:
+        st.markdown(f'<div class="zi-completa">✅ <b>Ziua {nr}</b> — {desc}</div>',
                     unsafe_allow_html=True)
 
 st.divider()
@@ -277,7 +288,8 @@ with col_m3:
     """, unsafe_allow_html=True)
 
 st.divider()
-st.info("""
-Selecteaza o zi din **meniul lateral stang** pentru a accesa modulul dorit.
-Zilele marcate cu ✅ sunt complete si functionale. Bloc 3: 33/40 zile finalizate.
+st.success("""
+**BLOC 3 COMPLET — 40/40 zile finalizate (9 aprilie 2026)**
+Selecteaza orice zi din **meniul lateral stang** pentru a accesa modulul dorit.
+Toate cele 40 de module sunt complete si functionale.
 """)
