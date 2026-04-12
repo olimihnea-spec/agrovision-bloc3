@@ -99,6 +99,20 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<div style='background:#f0f4f8; border-radius:10px; padding:18px 24px; margin-bottom:16px;
+            border-left:4px solid #0052A5; color:#333; font-size:15px; line-height:1.7;'>
+AgroVision este o platforma inteligenta de analiza si suport decizional, bazata pe tehnologii
+de inteligenta artificiala, conceputa pentru a procesa si interpreta date si imagini intr-un
+mod rapid si automatizat.<br><br>
+Sistemul utilizeaza modele avansate de analiza pentru a identifica tipare, a genera insight-uri
+si a crea rapoarte relevante, contribuind la optimizarea proceselor si la imbunatatirea
+deciziilor in diverse industrii.<br><br>
+Datorita arhitecturii sale flexibile, aplicatia poate fi adaptata pentru multiple domenii,
+de la analiza tehnica si operationala pana la cercetare si business intelligence.
+</div>
+""", unsafe_allow_html=True)
+
 # ─── KPI-URI PROGRES ──────────────────────────────────────────────────────────
 c1, c2, c3, c4, c5 = st.columns(5)
 with c1:
