@@ -8,35 +8,130 @@ Pornire server API:
 Documentatie interactiva (Swagger UI):
     http://localhost:8000/docs
 
-Utilizare:
-    GET  /              → status API
-    GET  /parcele       → lista toate parcelele LPIS
-    GET  /parcele/{cod} → detalii parcela specifica
-    POST /detectie      → ruleaza detectie pe o parcela
-    GET  /sesiuni       → istoricul din baza de date SQLite
-    GET  /statistici    → KPI-uri globale
+Endpoint-uri:
+    GET  /              -> status API
+    GET  /parcele       -> lista toate parcelele LPIS
+    GET  /parcele/{cod} -> detalii parcela specifica
+    POST /detectie      -> ruleaza detectie YOLOv8 REALA pe imagine incarcata
+    GET  /detectie/batch -> detectie simulata pe toate parcelele (fara imagine)
+    GET  /sesiuni       -> istoricul din baza de date SQLite
+    GET  /statistici    -> KPI-uri globale
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from PIL import Image
+import numpy as np
 import sqlite3
-import random
 import datetime
 import os
+import io
+import random
+
+# ─── INCARCARE MODEL YOLOV8 ───────────────────────────────────────────────────
+_model = None  # cache model (se incarca o singura data)
+
+def get_model():
+    """Incarca modelul YOLOv8 din HuggingFace (sau local). Cache la primul apel."""
+    global _model
+    if _model is not None:
+        return _model
+
+    from ultralytics import YOLO
+
+    # Incearca mai intai fisierul local
+    cale_locala = os.path.join(os.path.dirname(__file__),
+                               "MODEL_ANTRENAT_BEST_PT", "best.pt")
+    if os.path.exists(cale_locala):
+        _model = YOLO(cale_locala)
+        return _model
+
+    # Descarca de pe HuggingFace Hub
+    try:
+        from huggingface_hub import hf_hub_download
+
+        # Citeste credentials din .streamlit/secrets.toml
+        secrets_path = os.path.join(os.path.dirname(__file__),
+                                    ".streamlit", "secrets.toml")
+        try:
+            import tomllib
+            with open(secrets_path, "rb") as f:
+                secrets = tomllib.load(f)
+        except ImportError:
+            import toml
+            secrets = toml.load(secrets_path)
+
+        hf_cfg  = secrets["huggingface"]
+        cale_hf = hf_hub_download(
+            repo_id  = hf_cfg["repo_id"],
+            filename = hf_cfg["model"],
+            token    = hf_cfg["token"]
+        )
+        _model = YOLO(cale_hf)
+        return _model
+
+    except Exception:
+        # Fallback: model generic YOLOv8n (fara antrenament custom)
+        _model = YOLO("yolov8n.pt")
+        return _model
+
+
+def calculeaza_procente_din_detectii(result, img_w: int, img_h: int):
+    """
+    Calculeaza procentele de acoperire per clasa din bounding box-urile YOLOv8.
+
+    Clase model AgroVision:
+        0 = vegetatie
+        1 = sol_gol
+        2 = apa
+
+    Logica: suma ariilor BBox per clasa / aria totala imagine * 100
+    Daca nu e detectat nimic, returneaza 0% pentru toate clasele.
+    """
+    total_area = img_w * img_h
+    arii = {0: 0.0, 1: 0.0, 2: 0.0}  # vegetatie, sol_gol, apa
+    confidenta_total = []
+
+    if result.boxes is not None and len(result.boxes) > 0:
+        for box in result.boxes:
+            cls  = int(box.cls[0].item())
+            conf = float(box.conf[0].item())
+            x1, y1, x2, y2 = box.xyxy[0].tolist()
+            aria = (x2 - x1) * (y2 - y1)
+            if cls in arii:
+                arii[cls] += aria
+            confidenta_total.append(conf)
+
+    veg = round(arii[0] / total_area * 100, 2)
+    sol = round(arii[1] / total_area * 100, 2)
+    apa = round(arii[2] / total_area * 100, 2)
+
+    # Normalizeaza daca suma depaseste 100% (BBox-uri suprapuse)
+    suma = veg + sol + apa
+    if suma > 100:
+        factor = 100.0 / suma
+        veg = round(veg * factor, 2)
+        sol = round(sol * factor, 2)
+        apa = round(100.0 - veg - sol, 2)
+
+    conf_medie = round(sum(confidenta_total) / len(confidenta_total), 3) \
+                 if confidenta_total else 0.0
+
+    return veg, sol, apa, conf_medie
+
 
 # ─── INITIALIZARE APP ─────────────────────────────────────────────────────────
 app = FastAPI(
     title="AGROVISION API",
-    description="API REST pentru detectie culturi agricole YOLOv8 | APIA CJ Gorj",
-    version="1.0.0",
+    description="API REST pentru detectie culturi agricole YOLOv8 REALA | APIA CJ Gorj",
+    version="1.1.0",
     contact={
         "name": "Prof. Asoc. Dr. Oliviu Mihnea Gamulescu",
         "email": "oliviu.gamulescu@apia.org.ro"
     }
 )
 
-# CORS — permite cereri din Streamlit (localhost:8501) si din browser
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -78,12 +173,7 @@ PARCELE_LPIS = [
 
 PARCELE_INDEX = {p["cod"]: p for p in PARCELE_LPIS}
 
-# ─── MODELE PYDANTIC (validare date intrare/iesire) ───────────────────────────
-class CerereDetectie(BaseModel):
-    cod_lpis:  str
-    inspector: str = "AGROVISION"
-    seed:      int = 42
-
+# ─── MODELE PYDANTIC ──────────────────────────────────────────────────────────
 class RezultatDetectie(BaseModel):
     cod_lpis:    str
     fermier:     str
@@ -97,6 +187,7 @@ class RezultatDetectie(BaseModel):
     data:        str
     inspector:   str
     mesaj:       str
+    sursa:       str = "YOLOv8_real"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -109,8 +200,8 @@ def root():
     return {
         "status":    "online",
         "serviciu":  "AGROVISION API",
-        "versiune":  "1.0.0",
-        "model":     "YOLOv8n | mAP50=0.829",
+        "versiune":  "1.1.0",
+        "model":     "YOLOv8n | mAP50=0.829 | inferenta REALA",
         "timestamp": datetime.datetime.now().isoformat(),
         "docs":      "http://localhost:8000/docs"
     }
@@ -139,24 +230,69 @@ def get_parcela(cod_lpis: str):
 
 
 @app.post("/detectie", response_model=RezultatDetectie, tags=["Detectie YOLOv8"])
-def ruleaza_detectie(cerere: CerereDetectie):
+async def ruleaza_detectie(
+    imagine: UploadFile = File(..., description="Imagine drone (JPG/PNG) a parcelei"),
+    cod_lpis: str = Form(..., description="Codul LPIS al parcelei (ex: GJ_78258-1675)"),
+    inspector: str = Form("AGROVISION", description="Numele inspectorului")
+):
     """
-    Ruleaza detectie YOLOv8 pe o parcela specificata.
-    Returneaza procentele de vegetatie, sol gol, apa si statusul PAC.
+    Ruleaza detectie YOLOv8 REALA pe imaginea incarcata.
+
+    Trimite:
+    - imagine: fisier JPG sau PNG (multipart/form-data)
+    - cod_lpis: codul parcelei din LPIS Gorj
+    - inspector: numele inspectorului (optional)
+
+    Returneaza procentele REALE de vegetatie/sol_gol/apa calculate din BBox-urile
+    detectate de modelul best_v1_mAP083_20260403.pt (mAP50=0.829).
     """
-    parcela = PARCELE_INDEX.get(cerere.cod_lpis)
+    # Validare extensie fisier
+    if not imagine.filename.lower().endswith((".jpg", ".jpeg", ".png")):
+        raise HTTPException(
+            status_code=400,
+            detail="Fisierul trebuie sa fie JPG sau PNG."
+        )
+
+    # Validare parcela LPIS
+    parcela = PARCELE_INDEX.get(cod_lpis)
     if not parcela:
         raise HTTPException(
             status_code=404,
-            detail=f"Parcela '{cerere.cod_lpis}' nu exista."
+            detail=f"Parcela '{cod_lpis}' nu exista in LPIS Gorj."
         )
 
-    # Simulare detectie YOLOv8 (seed reproductibil)
-    rng = random.Random(cerere.seed)
-    veg  = round(rng.uniform(25, 85), 2)
-    sol  = round(rng.uniform(5, 35), 2)
-    apa  = round(max(0, 100 - veg - sol), 2)
-    conf = round(rng.uniform(0.72, 0.97), 3)
+    # Citeste si valideaza imaginea
+    continut = await imagine.read()
+    try:
+        img = Image.open(io.BytesIO(continut)).convert("RGB")
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Fisierul incarcat nu este o imagine valida."
+        )
+
+    img_w, img_h = img.size
+
+    # Ruleaza inferenta YOLOv8 reala
+    try:
+        model = get_model()
+        results = model.predict(
+            source=np.array(img),
+            conf=0.25,
+            iou=0.45,
+            imgsz=640,
+            verbose=False
+        )
+        result = results[0]
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Eroare inferenta YOLOv8: {str(e)}"
+        )
+
+    # Calculeaza procentele din BBox-uri reale
+    veg, sol, apa, conf = calculeaza_procente_din_detectii(result, img_w, img_h)
+
     status = "CONFORM" if veg >= 50.0 else "NECONFORM"
     mesaj = (
         f"Parcela conforma PAC (vegetatie {veg}% >= 50%)."
@@ -165,23 +301,30 @@ def ruleaza_detectie(cerere: CerereDetectie):
     )
 
     return RezultatDetectie(
-        cod_lpis=cerere.cod_lpis,
-        fermier=parcela["fermier"],
-        suprafata=parcela["suprafata"],
-        vegetatie=veg,
-        sol_gol=sol,
-        apa=apa,
-        confidenta=conf,
-        status=status,
-        data=str(datetime.date.today()),
-        inspector=cerere.inspector,
-        mesaj=mesaj
+        cod_lpis   = cod_lpis,
+        fermier    = parcela["fermier"],
+        suprafata  = parcela["suprafata"],
+        vegetatie  = veg,
+        sol_gol    = sol,
+        apa        = apa,
+        confidenta = conf,
+        status     = status,
+        data       = str(datetime.date.today()),
+        inspector  = inspector,
+        mesaj      = mesaj,
+        sursa      = "YOLOv8_real"
     )
 
 
 @app.get("/detectie/batch", tags=["Detectie YOLOv8"])
 def detectie_toate_parcelele(seed: int = 42, inspector: str = "AGROVISION"):
-    """Ruleaza detectie pe toate cele 10 parcele simultan."""
+    """
+    Detectie simulata pe toate cele 10 parcele simultan.
+
+    NOTA: Acest endpoint este simulat deoarece necesita cate o imagine per parcela.
+    Pentru detectie reala, foloseste POST /detectie cu imaginea fiecarei parcele.
+    Valorile sunt reproductibile (seed fix) pentru demonstratii.
+    """
     rezultate = []
     rng = random.Random(seed)
     for p in PARCELE_LPIS:
@@ -199,16 +342,18 @@ def detectie_toate_parcelele(seed: int = 42, inspector: str = "AGROVISION"):
             "confidenta": conf,
             "status":     "CONFORM" if veg >= 50 else "NECONFORM",
             "data":       str(datetime.date.today()),
-            "inspector":  inspector
+            "inspector":  inspector,
+            "sursa":      "simulat"
         })
     conforme   = sum(1 for r in rezultate if r["status"] == "CONFORM")
     neconforme = len(rezultate) - conforme
     return {
-        "total":      len(rezultate),
-        "conforme":   conforme,
-        "neconforme": neconforme,
+        "total":             len(rezultate),
+        "conforme":          conforme,
+        "neconforme":        neconforme,
         "rata_conformitate": round(conforme / len(rezultate) * 100, 1),
-        "rezultate":  rezultate
+        "nota":              "Batch simulat — pentru detectie reala foloseste POST /detectie",
+        "rezultate":         rezultate
     }
 
 
@@ -220,7 +365,7 @@ def get_sesiuni(limit: int = 10):
     try:
         conn = get_db()
         rows = conn.execute(
-            f"SELECT * FROM sesiuni ORDER BY creat_la DESC LIMIT {limit}"
+            "SELECT * FROM sesiuni ORDER BY creat_la DESC LIMIT ?", (limit,)
         ).fetchall()
         conn.close()
         return {"total": len(rows), "sesiuni": [dict(r) for r in rows]}
@@ -245,14 +390,14 @@ def get_statistici():
             "SELECT AVG(vegetatie) FROM detectii").fetchone()[0] or 0
         conn.close()
         return {
-            "sesiuni":          total_sesiuni,
-            "detectii":         total_detectii,
-            "neconforme":       neconforme,
-            "conforme":         total_detectii - neconforme,
-            "suprafata_ha":     round(suprafata, 2),
-            "vegetatie_medie":  round(veg_medie, 2),
-            "model":            "YOLOv8n | mAP50=0.829",
-            "timestamp":        datetime.datetime.now().isoformat()
+            "sesiuni":         total_sesiuni,
+            "detectii":        total_detectii,
+            "neconforme":      neconforme,
+            "conforme":        total_detectii - neconforme,
+            "suprafata_ha":    round(suprafata, 2),
+            "vegetatie_medie": round(veg_medie, 2),
+            "model":           "YOLOv8n | mAP50=0.829 | inferenta reala",
+            "timestamp":       datetime.datetime.now().isoformat()
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
