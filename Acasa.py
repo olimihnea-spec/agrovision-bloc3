@@ -103,13 +103,13 @@ st.markdown("""
 <div style='background:#f0f4f8; border-radius:10px; padding:18px 24px; margin-bottom:16px;
             border-left:4px solid #0052A5; color:#333; font-size:15px; line-height:1.7;'>
 AgroVision este o platforma inteligenta de analiza si suport decizional, bazata pe tehnologii
-de inteligenta artificiala, conceputa pentru a procesa si interpreta date si imagini intr-un
-mod rapid si automatizat.<br><br>
-Sistemul utilizeaza modele avansate de analiza pentru a identifica tipare, a genera insight-uri
-si a crea rapoarte relevante, contribuind la optimizarea proceselor si la imbunatatirea
-deciziilor in diverse industrii.<br><br>
-Datorita arhitecturii sale flexibile, aplicatia poate fi adaptata pentru multiple domenii,
-de la analiza tehnica si operationala pana la cercetare si business intelligence.
+de inteligenta artificiala, conceputa pentru a procesa si interpreta imagini drone agricole
+intr-un mod rapid si automatizat.<br><br>
+Sistemul utilizeaza modele avansate YOLOv8 pentru a identifica tipare de vegetatie, a genera
+rapoarte de conformitate PAC si a crea insight-uri relevante, contribuind la optimizarea
+controalelor de teren si la imbunatatirea deciziilor agricole.<br><br>
+Datorita arhitecturii modulare (40 module active), aplicatia poate fi utilizata de la analiza
+spectrala si clustering GIS pana la generare rapoarte ministeriale si articole stiintifice.
 </div>
 """, unsafe_allow_html=True)
 
